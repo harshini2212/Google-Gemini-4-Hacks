@@ -1,0 +1,12 @@
+/* OWNER: Rucha. Cart bar + checkout sheet styles. */
+.cart-bar { position: relative; margin-top: 16px; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; }
+.cart-items { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+.cart-chip { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; padding: 4px 6px 4px 10px; background: var(--panel-2); border-radius: 999px; }
+.cart-chip button { border: 0; background: none; display: grid; place-items: center; padding: 2px; }
+.checkout-sheet { position: absolute; right: 0; bottom: calc(100% + 8px); width: min(460px, 100%); z-index: 10; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 18px 40px rgba(20, 30, 20, .18); padding: 12px; display: grid; gap: 8px; }
+.checkout-head { display: flex; justify-content: space-between; align-items: center; }
+.checkout-head h3 { margin: 0; font-size: 15px; }
+.checkout-head button { border: 0; background: none; }
+.checkout-row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 9px; background: var(--accent); color: #0d0b1f; text-decoration: none; font-size: 13.5px; }
+.checkout-row span:last-child { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.checkout-sheet p { font-size: 12px; color: var(--muted); }
