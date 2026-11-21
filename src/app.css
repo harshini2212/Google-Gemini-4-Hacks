@@ -144,3 +144,20 @@ h1, h2, h3, h4, p { margin: 0; }
   .modellog li { grid-template-columns: 80px 1fr 54px; }
   .modellog code { display: none; }
 }
+
+/* live model rail */
+.rail { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 4px; scrollbar-width: thin; }
+.rail-idle { color: var(--muted); font-size: 12.5px; padding: 2px 4px; }
+.rail-step { flex: none; display: grid; gap: 1px; min-width: 132px; padding: 7px 10px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--muted); font-size: 12.5px; animation: railIn .35s ease-out; }
+.rail-step b { font-size: 12px; letter-spacing: .02em; }
+.rail-step small { color: var(--muted); font-size: 11px; }
+.rail-decision { border-left-color: var(--warn); } .rail-decision b { color: var(--warn); }
+.rail-neon { border-left-color: var(--accent-2); } .rail-neon b { color: var(--accent-2); }
+.rail-hydrogen { border-left-color: #9be86f; } .rail-hydrogen b { color: #9be86f; }
+.rail-carbon { border-left-color: #c79bff; } .rail-carbon b { color: #c79bff; }
+.rail-image { border-left-color: #ff9bd1; } .rail-image b { color: #ff9bd1; }
+.rail-live { border-left-color: #7fb4ff; } .rail-live b { color: #7fb4ff; }
+.rail-fail { opacity: .6; }
+.rail-busy { display: flex; align-items: center; gap: 8px; border-left-color: var(--accent); }
+@keyframes railIn { from { opacity: 0; transform: translateY(4px); } }
+.layout > *, .stage-panel { min-width: 0; }

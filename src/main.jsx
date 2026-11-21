@@ -46,8 +46,57 @@ function TopBar({ status }) {
   );
 }
 
+/* ---------- live model rail: which Gemini model is doing which job, right now ---------- */
+const WHY = {
+  decision: "instant yes/no, rank, score",
+  neon: "analysis while you wait",
+  hydrogen: "parallel workers",
+  carbon: "deepest reasoning",
+  image: "in-room preview",
+  live: "voice + camera",
+};
+function plainJob(job) {
+  if (/^gate/.test(job)) return "is this a room?";
+  if (/^spec worker/.test(job)) return "read product specs";
+  if (/^rank/.test(job)) return job.replace(" for this room", "");
+  if (/read the room/.test(job)) return "measure the room";
+  if (/draft the 3D/.test(job)) return "build 3D at true size";
+  if (/repair/.test(job)) return "repair the 3D model";
+  if (/score the 3D render/.test(job)) return "score 3D vs photo";
+  if (/differences/.test(job)) return "spot differences";
+  if (/^place /.test(job)) return "place in your room";
+  if (/chat agent/.test(job)) return "plan next step";
+  if (/live session/.test(job)) return "open the call";
+  return job;
+}
+function ModelRail({ trace, busy }) {
+  const since = Date.now() - 90_000;
+  const recent = trace.filter(t => t.at >= since);
+  const steps = [];
+  for (const t of recent) {
+    const job = plainJob(t.job);
+    const last = steps[steps.length - 1];
+    if (last && last.role === t.role && last.job === job) { last.count += 1; last.ms = Math.max(last.ms, t.ms); last.ok = last.ok && t.ok; }
+    else steps.push({ role: t.role, job, count: 1, ms: t.ms, ok: t.ok });
+  }
+  const shown = steps.slice(-6);
+  if (!shown.length && !busy) return <div className="rail rail-idle">Each step below names the Gemini model doing it, live.</div>;
+  return (
+    <div className="rail" aria-live="polite">
+      {shown.map((st, i) => (
+        <div key={i} className={`rail-step rail-${st.role}${st.ok ? "" : " rail-fail"}`}>
+          <b>{ROLE[st.role] ?? st.role}{st.count > 1 ? ` ×${st.count}` : ""}</b>
+          <span>{st.job}</span>
+          <small>{st.job === "plan next step" ? "fast agent" : WHY[st.role]} · {(st.ms / 1000).toFixed(1)}s</small>
+        </div>
+      ))}
+      {busy && <div className="rail-step rail-busy"><i className="spin" /><span>{busy}</span></div>}
+    </div>
+  );
+}
+
 /* ---------- camera / 3D / staged stage ---------- */
-function Stage({ videoRef, cameraOn, toggleCamera, view, setView, build, critique, staged, modelRef, busy }) {
+function Stage({ videoRef, cameraOn, toggleCamera, view, setView, build, critique, staged, modelRef, busy, trace }) {
   const views = [
     { id: "room", label: "Room", icon: Camera, enabled: true },
     { id: "model", label: "3D", icon: Box, enabled: Boolean(build) },
@@ -86,12 +135,18 @@ function Stage({ videoRef, cameraOn, toggleCamera, view, setView, build, critiqu
         {busy && <div className="hud hud-top"><i className="spin" />{busy}</div>}
       </div>
       {build ? (
+        <>
+        <ModelRail trace={trace} busy={busy} />
         <ul className="checklist">
           {build.steps.map((s, i) => <li key={i}><Check size={13} /><b>{s.step}</b><span>{s.detail}</span></li>)}
           {critique && <li><Check size={13} /><b>visual check</b><span>{critique.score}/10 likeness{critique.issues?.length ? ` · ${critique.issues.slice(0, 2).join("; ")}` : ""}</span></li>}
         </ul>
+        </>
       ) : (
+        <>
+        <ModelRail trace={trace} busy={busy} />
         <p className="stage-hint">Theo sees your room, finds real products on Shopify, and rebuilds each one in 3D at its true size.</p>
+        </>
       )}
     </section>
   );
@@ -227,7 +282,7 @@ function App() {
 
   useEffect(() => {
     call("/api/status").then(setStatus).catch(() => {});
-    const t = setInterval(() => call("/api/trace").then(d => setTrace(d.trace)).catch(() => {}), 2500);
+    const t = setInterval(() => call("/api/trace").then(d => setTrace(d.trace)).catch(() => {}), 1000);
     return () => clearInterval(t);
   }, []);
   useEffect(() => { if (import.meta.env.DEV) window.__space = { setBuild, setProducts, setView, act }; });
@@ -405,7 +460,7 @@ function App() {
         </section>
         <div className="layout">
           <Stage videoRef={videoRef} cameraOn={cameraOn} toggleCamera={cameraOn ? cameraStop : cameraStart} view={view} setView={setView}
-            build={build} critique={critique} staged={staged} modelRef={modelRef} busy={busy} />
+            build={build} critique={critique} staged={staged} modelRef={modelRef} busy={busy} trace={trace} />
           <Theo log={log} live={live} pending={pending} voice={voice} error={error} clearError={() => setError("")}
             send={send} startVoice={startVoice} stopVoice={stopVoice} />
         </div>
