@@ -1,8 +1,8 @@
-// Space Theory app: live camera stage, Theo (the voice/chat guide), product shelf, cart, and a model-activity log.
+// Space Theory app: live camera stage, the designer (the voice/chat guide), product shelf, cart, and a model-activity log.
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Box, Camera, CameraOff, Check, CircleStop, Mic, Orbit, Ruler, ScanLine, Send, ShoppingBag, Sparkles, Wand2,
+  Box, Camera, CameraOff, Check, CircleStop, Mic, Orbit, Ruler, Scale, ScanLine, Send, ShoppingBag, Sparkles, Wand2,
 } from "lucide-react";
 import "@fontsource-variable/dm-sans";
 import "./app.css";
@@ -12,6 +12,7 @@ import { CartBar } from "./commerce/cart.jsx";
 import { makeCartItem, startCheckout } from "./commerce/client.mjs";
 
 const STARTERS = [
+  "Redesign this room as a cozy Japandi lounge",
   "What would make this room feel finished?",
   "Find a sofa that fits this wall, under $1,800",
   "I need a floor lamp for this corner",
@@ -96,11 +97,11 @@ function ModelRail({ trace, busy }) {
 }
 
 /* ---------- camera / 3D / staged stage ---------- */
-function Stage({ videoRef, cameraOn, toggleCamera, view, setView, build, critique, staged, modelRef, busy, trace }) {
+function Stage({ videoRef, cameraOn, toggleCamera, view, setView, build, critique, staged, modelRef, busy, trace, act }) {
   const views = [
     { id: "room", label: "Room", icon: Camera, enabled: true },
     { id: "model", label: "3D", icon: Box, enabled: Boolean(build) },
-    { id: "staged", label: "In your room", icon: Wand2, enabled: Boolean(staged) },
+    { id: "staged", label: staged?.items ? "Redesign" : "In your room", icon: Wand2, enabled: Boolean(staged) },
   ];
   return (
     <section className="panel stage-panel">
@@ -127,11 +128,26 @@ function Stage({ videoRef, cameraOn, toggleCamera, view, setView, build, critiqu
           <ModelView ref={modelRef} model={build.model} overlay={view === "room" && cameraOn} spin={view === "model"} />
         )}
         {view === "staged" && staged && <img className="staged-img" src={staged.image} alt={`${staged.product.title} previewed in your room`} />}
-        {build && view !== "staged" && (
+        {build && view !== "staged" && (build.compare ? (
+          <div className="hud hud-bottom"><Ruler size={14} />
+            {build.compare.map((c, i) => <span key={i}>{i ? " · " : ""}{i ? "Right" : "Left"}: {c.product.title} {toCm(c.dims.w)} W × {toCm(c.dims.h)} H</span>)}
+            <small>person = 170 cm</small></div>
+        ) : (
           <div className="hud hud-bottom"><Ruler size={14} />{build.product.title} · {toCm(build.dims.w)} W × {toCm(build.dims.d)} D × {toCm(build.dims.h)} H
-            <small>{toIn(build.dims.w)} × {toIn(build.dims.d)} × {toIn(build.dims.h)}</small></div>
-        )}
-        {view === "staged" && <div className="hud hud-bottom"><Wand2 size={14} />Generated preview. Colours and details may differ slightly.</div>}
+            <small>{toIn(build.dims.w)} × {toIn(build.dims.d)} × {toIn(build.dims.h)}{view === "model" ? " · person = 170 cm" : ""}</small></div>
+        ))}
+        {view === "staged" && staged?.items ? (
+          <div className="look">
+            <p><Wand2 size={14} /> {staged.summary}</p>
+            <div className="look-items">
+              {staged.items.map(it => (
+                <button type="button" key={it.item} onClick={() => act("find_products", { query: it.search })}>
+                  <ShoppingBag size={13} /> {it.item}<small>~{Math.round(it.approx_width_cm)} cm</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : view === "staged" && <div className="hud hud-bottom"><Wand2 size={14} />Generated preview. Colours and details may differ slightly.</div>}
         {busy && <div className="hud hud-top"><i className="spin" />{busy}</div>}
       </div>
       {build ? (
@@ -145,15 +161,15 @@ function Stage({ videoRef, cameraOn, toggleCamera, view, setView, build, critiqu
       ) : (
         <>
         <ModelRail trace={trace} busy={busy} />
-        <p className="stage-hint">Theo sees your room, finds real products on Shopify, and rebuilds each one in 3D at its true size.</p>
+        <p className="stage-hint">the designer sees your room, finds real products on Shopify, and rebuilds each one in 3D at its true size.</p>
         </>
       )}
     </section>
   );
 }
 
-/* ---------- Theo: voice + chat ---------- */
-function Theo({ log, live, pending, voice, error, clearError, send, startVoice, stopVoice }) {
+/* ---------- the designer: voice + chat ---------- */
+function Designer({ log, live, pending, voice, error, clearError, send, startVoice, stopVoice }) {
   const [draft, setDraft] = useState("");
   const scroller = useRef(null);
   const onCall = ["connecting", "listening", "thinking", "speaking"].includes(voice);
@@ -167,26 +183,26 @@ function Theo({ log, live, pending, voice, error, clearError, send, startVoice, 
     setDraft("");
   };
   return (
-    <aside className="panel theo">
-      <header className="theo-head">
+    <aside className="panel designer">
+      <header className="designer-head">
         <div className={onCall ? "orb orb-on" : "orb"}><Sparkles size={18} /></div>
-        <div><h2>Theo</h2><p>{label}</p></div>
+        <div><h2>Designer</h2><p>{label}</p></div>
         <button type="button" className={onCall ? "btn btn-stop" : "btn btn-accent"} onClick={onCall ? stopVoice : startVoice}>
           {onCall ? <><CircleStop size={15} /> End call</> : <><Mic size={15} /> Start call</>}
         </button>
       </header>
       <div className="feedlog" ref={scroller} aria-live="polite">
-        <p className="msg msg-theo">Hey, I'm Theo. Show me your room and tell me what you need. I'll find real pieces that fit, show them in 3D at true size, and get them in your cart.</p>
+        <p className="msg msg-ai">Hey! I'm your Space Theory designer. Show me your room and tell me what you need. I'll find real pieces that fit, show them in 3D at true size, and get them in your cart.</p>
         {log.map(m => <p key={m.id} className={`msg msg-${m.who}`}>{m.text}</p>)}
-        {live && <p className="msg msg-theo">{live}</p>}
-        {pending && <p className="msg msg-theo typing"><span /><span /><span /></p>}
+        {live && <p className="msg msg-ai">{live}</p>}
+        {pending && <p className="msg msg-ai typing"><span /><span /><span /></p>}
         {!log.length && !pending && (
           <div className="starters">{STARTERS.map(s => <button type="button" key={s} onClick={() => send(s)}>{s}</button>)}</div>
         )}
       </div>
       {error && <div className="alert" role="alert"><span>{error}</span><button type="button" onClick={clearError} aria-label="Dismiss">×</button></div>}
       <form className="composer" onSubmit={submit}>
-        <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Message Theo…" maxLength={500} aria-label="Message Theo" />
+        <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Message the designer…" maxLength={500} aria-label="Message the designer" />
         <button type="submit" disabled={!draft.trim() || pending} aria-label="Send"><Send size={17} /></button>
       </form>
     </aside>
@@ -202,7 +218,13 @@ function Fit({ fit, dims }) {
 }
 
 function Shelf({ products, room, act, cart }) {
+  const [pick, setPick] = useState(null);
   if (!products.length) return null;
+  const compare = id => {
+    if (!pick) return setPick(id);
+    if (pick !== id) act("compare_in_3d", { product_id_a: pick, product_id_b: id });
+    setPick(null);
+  };
   return (
     <section className="shelf">
       <h3>Real products from Shopify stores{room?.style ? <span> · ranked for your {room.style.toLowerCase()} {room.room_type?.toLowerCase()}</span> : null}</h3>
@@ -219,6 +241,8 @@ function Shelf({ products, room, act, cart }) {
               <div className="card-actions">
                 <button type="button" onClick={() => act("show_in_3d", { product_id: p.id })}><Box size={14} /> 3D</button>
                 <button type="button" onClick={() => act("place_in_room", { product_id: p.id })}><Wand2 size={14} /> Place</button>
+                <button type="button" className={pick === p.id ? "picked" : ""} onClick={() => compare(p.id)} title={pick && pick !== p.id ? "Compare with the one you picked" : "Pick to compare"}>
+                  <Scale size={14} /> {pick === p.id ? "Pick 2nd" : "VS"}</button>
                 <button type="button" className="buy" onClick={() => act("add_to_cart", { product_id: p.id })}>
                   {cart.some(c => c.productId === p.id) ? <Check size={14} /> : <ShoppingBag size={14} />} Add
                 </button>
@@ -295,7 +319,7 @@ function App() {
       setCameraOn(true);
       setView("room");
     } catch {
-      setError("Allow camera access so Theo can see your room.");
+      setError("Allow camera access so the designer can see your room.");
     }
   }
   function cameraStop() {
@@ -328,7 +352,7 @@ function App() {
     } catch { /* the check is a bonus; the model is already shown */ }
   }
 
-  // Every tool Theo can use, whether the live call or the typed chat asked for it.
+  // Every tool the designer can use, whether the live call or the typed chat asked for it.
   async function act(name, args = {}) {
     try {
       if (name === "look_at_room") {
@@ -338,6 +362,15 @@ function App() {
         const scan = await call("/api/scan", { frame, goal: args.goal });
         setRoom(scan);
         return scan;
+      }
+      if (name === "redesign_room") {
+        const frame = snap(1280, 0.9);
+        if (!frame) return { error: "The camera is off." };
+        setBusy(`Redesigning your room: ${args.style || "designer's pick"}…`);
+        const out = await call("/api/redesign", { frame, style: args.style });
+        setStaged({ image: out.image, product: { title: `${out.style} redesign` }, items: out.items, summary: out.summary });
+        setView("staged");
+        return { look: out.summary, pieces: out.items };
       }
       if (name === "find_products") {
         setBusy(`Searching Shopify for “${args.query}”…`);
@@ -360,6 +393,40 @@ function App() {
         selfCheck(result);
         return { shown: result.product.title, size_cm: result.dims, size_source: result.dims.source,
           passed_checks_first_try: result.checks.first.ok, repairs: result.steps.filter(s => s.step.startsWith("repair")).length };
+      }
+      if (name === "compare_in_3d") {
+        const [a, b] = [byId(args.product_id_a), byId(args.product_id_b)];
+        setBusy(`Building ${a?.title ?? "both"} and ${b?.title ?? "the other"} side by side…`);
+        const [ra, rb] = await Promise.all([
+          call("/api/model3d", { productId: args.product_id_a }),
+          call("/api/model3d", { productId: args.product_id_b }),
+        ]);
+        const gap = 40; // cm between the two pieces
+        const shift = ra.dims.w / 2 + gap + rb.dims.w / 2;
+        const merged = {
+          name: `${ra.product.title} vs ${rb.product.title}`,
+          parts: [
+            ...ra.model.parts.map(p => ({ ...p, center_cm: [p.center_cm[0] - shift / 2, p.center_cm[1], p.center_cm[2]] })),
+            ...rb.model.parts.map(p => ({ ...p, center_cm: [p.center_cm[0] + shift / 2, p.center_cm[1], p.center_cm[2]] })),
+          ],
+        };
+        setCritique(null);
+        setBuild({
+          product: { id: `${ra.product.id}|${rb.product.id}`, title: `${ra.product.title} (left) vs ${rb.product.title} (right)` },
+          dims: { w: ra.dims.w + gap + rb.dims.w, d: Math.max(ra.dims.d, rb.dims.d), h: Math.max(ra.dims.h, rb.dims.h) },
+          compare: [ra, rb],
+          model: merged,
+          steps: [
+            { step: "left", detail: `${ra.product.title}: ${toCm(ra.dims.w)} W × ${toCm(ra.dims.d)} D × ${toCm(ra.dims.h)} H · ${ra.dims.source}` },
+            { step: "right", detail: `${rb.product.title}: ${toCm(rb.dims.w)} W × ${toCm(rb.dims.d)} D × ${toCm(rb.dims.h)} H · ${rb.dims.source}` },
+          ],
+          checks: { first: { ok: ra.checks.first.ok && rb.checks.first.ok } },
+        });
+        setView("model");
+        return {
+          left: { title: ra.product.title, size_cm: ra.dims }, right: { title: rb.product.title, size_cm: rb.dims },
+          width_difference_cm: Math.round(Math.abs(ra.dims.w - rb.dims.w)),
+        };
       }
       if (name === "place_in_room") {
         const frame = snap(1280, 0.9);
@@ -401,7 +468,7 @@ function App() {
       for (let i = 0; i < 6; i += 1) {
         const turn = await call("/api/turn", { contents: history.current });
         history.current.push(turn.content);
-        if (turn.text) say("theo", turn.text);
+        if (turn.text) say("ai", turn.text);
         if (!turn.functionCalls.length) break;
         const parts = [];
         for (const fc of turn.functionCalls) parts.push({ functionResponse: { name: fc.name, response: { output: await act(fc.name, fc.args ?? {}) } } });
@@ -427,19 +494,19 @@ function App() {
         onEvent(ev) {
           if (ev.type === "speaking" || ev.type === "listening" || ev.type === "thinking") setVoice(ev.type);
           else if (ev.type === "user-text") heard.current += ev.text;
-          else if (ev.type === "theo-text") {
+          else if (ev.type === "ai-text") {
             if (heard.current) { say("you", heard.current); heard.current = ""; }
             setLive(t => t + ev.text);
-          } else if (ev.type === "turn-complete") setLive(t => { say("theo", t); return ""; });
+          } else if (ev.type === "turn-complete") setLive(t => { say("ai", t); return ""; });
           else if (ev.type === "error") setError(ev.message);
           else if (ev.type === "closed") { stopVoice(); setError("The call ended. Tap Start call to reconnect."); }
         },
       });
       setVoice("listening");
-      session.current.say("Hi Theo! I'm showing you my room now.");
+      session.current.say("Hi! I'm showing you my room now.");
     } catch (e) {
       stopVoice();
-      setError(e.name === "NotAllowedError" ? "Allow the microphone to talk to Theo." : e.message);
+      setError(e.name === "NotAllowedError" ? "Allow the microphone to talk to the designer." : e.message);
     }
   }
   function stopVoice() {
@@ -460,8 +527,8 @@ function App() {
         </section>
         <div className="layout">
           <Stage videoRef={videoRef} cameraOn={cameraOn} toggleCamera={cameraOn ? cameraStop : cameraStart} view={view} setView={setView}
-            build={build} critique={critique} staged={staged} modelRef={modelRef} busy={busy} trace={trace} />
-          <Theo log={log} live={live} pending={pending} voice={voice} error={error} clearError={() => setError("")}
+            build={build} critique={critique} staged={staged} modelRef={modelRef} busy={busy} trace={trace} act={act} />
+          <Designer log={log} live={live} pending={pending} voice={voice} error={error} clearError={() => setError("")}
             send={send} startVoice={startVoice} stopVoice={stopVoice} />
         </div>
         <CartBar cart={cart} setCart={setCart} checkouts={checkouts} setCheckouts={setCheckouts} run={act} />

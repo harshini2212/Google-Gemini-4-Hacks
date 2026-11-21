@@ -42,6 +42,19 @@ function buildGroup(model) {
   return group;
 }
 
+// A 170 cm person standing beside the product, so true size reads at a glance.
+function scalePerson() {
+  const person = new THREE.Group();
+  const skin = new THREE.MeshStandardMaterial({ color: 0x8b93a7, roughness: 0.8, transparent: true, opacity: 0.55 });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 1.12, 6, 16), skin);
+  body.position.y = 0.17 + 0.56;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 24, 16), skin);
+  head.position.y = 1.70 - 0.115;
+  for (const mesh of [body, head]) { mesh.castShadow = true; person.add(mesh); }
+  person.name = "person-170cm";
+  return person;
+}
+
 export const ModelView = forwardRef(function ModelView({ model, overlay, spin = true }, ref) {
   const host = useRef(null);
   const three = useRef(null);
@@ -110,11 +123,18 @@ export const ModelView = forwardRef(function ModelView({ model, overlay, spin = 
       state.group.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); });
       state.group = null;
     }
+    if (state.person) { state.scene.remove(state.person); state.person = null; }
     if (!model?.parts?.length) return;
     const group = buildGroup(model);
     state.scene.add(group);
     state.group = group;
-    const box = new THREE.Box3().setFromObject(group);
+    const productBox = new THREE.Box3().setFromObject(group);
+    state.person = scalePerson();
+    state.person.position.set(productBox.max.x + 0.45, 0, (productBox.min.z + productBox.max.z) / 2);
+    state.person.visible = !overlay;
+    state.scene.add(state.person);
+    const box = productBox.clone();
+    if (state.person.visible) box.union(new THREE.Box3().setFromObject(state.person));
     const size = box.getSize(new THREE.Vector3());
     const centre = box.getCenter(new THREE.Vector3());
     const radius = Math.max(size.x, size.y, size.z);
@@ -128,6 +148,7 @@ export const ModelView = forwardRef(function ModelView({ model, overlay, spin = 
     if (!state) return;
     state.controls.autoRotate = spin;
     state.grid.visible = !overlay;
+    if (state.person) state.person.visible = !overlay;
   }, [spin, overlay]);
 
   useImperativeHandle(ref, () => ({
@@ -135,8 +156,12 @@ export const ModelView = forwardRef(function ModelView({ model, overlay, spin = 
     snapshot() {
       const state = three.current;
       if (!state?.group) return null;
+      const personWasVisible = state.person?.visible;
+      if (state.person) state.person.visible = false; // the visual check compares the product alone
       state.renderer.render(state.scene, state.camera);
-      return state.renderer.domElement.toDataURL("image/png").split(",")[1];
+      const png = state.renderer.domElement.toDataURL("image/png").split(",")[1];
+      if (state.person) state.person.visible = personWasVisible;
+      return png;
     },
   }), []);
 

@@ -10,7 +10,7 @@ export class ProviderError extends Error {
 }
 
 export const MODELS = {
-  // Gemini 3.8 Live: two-way voice + camera over WebSockets, calls Theo's tools.
+  // Gemini 3.8 Live: two-way voice + camera over WebSockets, calls the designer's tools.
   live: () => process.env.GEMINI_LIVE_MODEL || "gemini-3.8-live",
   // Gemini 4 Carbon: deepest reasoning. Builds and repairs the measured 3D part model.
   carbon: () => process.env.GEMINI_CARBON_MODEL || "gemini-4-carbon",
@@ -29,7 +29,7 @@ const THINKING = { carbon: "MEDIUM", neon: "MEDIUM", hydrogen: "LOW" };
 let client;
 let betaClient;
 export function gemini() {
-  if (!process.env.GEMINI_API_KEY) throw new ProviderError(503, "Add GEMINI_API_KEY to .env to wake Theo up.");
+  if (!process.env.GEMINI_API_KEY) throw new ProviderError(503, "Add GEMINI_API_KEY to .env to wake the designer up.");
   client ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   return client;
 }
@@ -97,6 +97,7 @@ export async function generateJson({ role, job, parts, schema, system, thinking 
         responseMimeType: "application/json",
         responseSchema: schema,
         thinkingConfig: { thinkingLevel: thinking ?? THINKING[role] ?? "MEDIUM" },
+        httpOptions: { timeout: 90_000 },
       },
     }));
     const value = JSON.parse(response.text ?? "");
@@ -138,7 +139,7 @@ async function imageOnce(model, parts, job) {
   try {
     const response = await withRetry(() => gemini().models.generateContent({
       model, contents: [{ role: "user", parts }],
-      config: { responseModalities: ["IMAGE"] },
+      config: { responseModalities: ["IMAGE"], httpOptions: { timeout: 60_000 } },
     }));
     const image = (response.candidates?.[0]?.content?.parts ?? []).find(part => part.inlineData?.data && !part.thought);
     record({ role: "image", model, job, ms: Date.now() - started, ok: Boolean(image) });

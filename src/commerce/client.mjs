@@ -1,4 +1,4 @@
-// OWNER: Rucha (see docs/TEAM-PLAN.md). Browser-side commerce calls used by Theo's tools.
+// OWNER: Rucha (see docs/TEAM-PLAN.md). Browser-side commerce calls used by the designer's tools.
 // main.jsx only calls these three functions, so everything behind them is yours to change.
 
 async function post(path, payload) {

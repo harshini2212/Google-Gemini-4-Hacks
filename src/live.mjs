@@ -1,4 +1,4 @@
-// Gemini Live in the browser: the shopper's microphone and camera stream in, Theo's voice streams out,
+// Gemini Live in the browser: the shopper's microphone and camera stream in, the designer's voice streams out,
 // and her tool calls run against the same actions as the typed chat.
 import { GoogleGenAI, Modality } from "@google/genai";
 import { homeInstructions, homeTools } from "../shared/home-tools.mjs";
@@ -16,7 +16,7 @@ const worklet = `class Mic extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor("theo-mic", Mic);`;
+registerProcessor("space-mic", Mic);`;
 
 function toBase64(bytes) {
   let binary = "";
@@ -91,7 +91,7 @@ export async function connectLive({ grabFrame, onTool, onEvent, signal }) {
           if (content?.interrupted) { stopPlayback(); onEvent({ type: "listening" }); }
           for (const part of content?.modelTurn?.parts ?? []) if (part.inlineData?.data) play(part.inlineData.data);
           if (content?.inputTranscription?.text) onEvent({ type: "user-text", text: content.inputTranscription.text });
-          if (content?.outputTranscription?.text) onEvent({ type: "theo-text", text: content.outputTranscription.text });
+          if (content?.outputTranscription?.text) onEvent({ type: "ai-text", text: content.outputTranscription.text });
           if (content?.turnComplete) onEvent({ type: "turn-complete" });
           const calls = message.toolCall?.functionCalls ?? [];
           if (calls.length) {
@@ -112,7 +112,7 @@ export async function connectLive({ grabFrame, onTool, onEvent, signal }) {
 
   await inCtx.audioWorklet.addModule(URL.createObjectURL(new Blob([worklet], { type: "text/javascript" })));
   const source = inCtx.createMediaStreamSource(mic);
-  const node = new AudioWorkletNode(inCtx, "theo-mic");
+  const node = new AudioWorkletNode(inCtx, "space-mic");
   node.port.onmessage = ({ data }) => {
     if (!closed) session.sendRealtimeInput({ audio: { data: pcm16(data), mimeType: "audio/pcm;rate=16000" } });
   };

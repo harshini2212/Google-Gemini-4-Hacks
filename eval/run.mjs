@@ -9,7 +9,7 @@
 //                       screenshot, a showroom photo). This is the messy, hard case.
 // Two systems:
 //   baseline  - one call to the same reasoning model: "build this product in 3D" (no dimension step, no checks)
-//   pipeline  - Theo: dimension extraction -> draft -> rule checks -> up to 2 repairs -> snap to measured size
+//   pipeline  - the designer: dimension extraction -> draft -> rule checks -> up to 2 repairs -> snap to measured size
 //
 // Usage:  node --env-file=.env eval/run.mjs [--n 20] [--conditions A,B] [--seed 7] [--collect-only]
 import { mkdir, writeFile } from "node:fs/promises";
@@ -156,7 +156,7 @@ Pipeline drafts that passed every check on the first try: ${pct(mean(results.fil
 
 ## Where the pipeline still fails (worst ${worst.length})
 
-${worst.map(r => `- **${r.title}** (${label[r.condition]}): ${pct(r.mape)} off. Truth ${r.truth.w}×${r.truth.d}×${r.truth.h} cm; Theo used ${r.extracted ? `${r.extracted.w}×${r.extracted.d}×${r.extracted.h} cm (${String(r.extracted.source).slice(0, 120)})` : "n/a"}${r.error ? ` · error: ${r.error}` : ""}`).join("\n")}
+${worst.map(r => `- **${r.title}** (${label[r.condition]}): ${pct(r.mape)} off. Truth ${r.truth.w}×${r.truth.d}×${r.truth.h} cm; the designer used ${r.extracted ? `${r.extracted.w}×${r.extracted.d}×${r.extracted.h} cm (${String(r.extracted.source).slice(0, 120)})` : "n/a"}${r.error ? ` · error: ${r.error}` : ""}`).join("\n")}
 
 Raw results: \`eval/results/${stamp}.json\`
 `;

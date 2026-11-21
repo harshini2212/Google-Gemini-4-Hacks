@@ -1,8 +1,17 @@
 # Space Theory
 
-**Shop your own room on a live video call.** Point your phone camera at a room and talk to Theo. Theo looks at the space, finds real products in Shopify stores, and rebuilds each one as a **measured 3D model** at its true size. You can turn the model around over your live camera, or have Theo draw it into a photo of your room. When you decide, Theo fills a real Shopify cart, and you confirm and pay.
+**Shop your own room on a live video call.** Point your phone camera at a room and talk to the designer. The designer looks at the space, finds real products in Shopify stores, and rebuilds each one as a **measured 3D model** at its true size. You can turn the model around over your live camera, or have the designer draw it into a photo of your room. When you decide, the designer fills a real Shopify cart, and you confirm and pay.
 
 Built at the Gemini 4 NYC Hackathon, 21 November 2026 · Problem Statement Two (Element 119) + Shopify track.
+
+## What it does live
+- **Redesign your real room**: "make this a cozy Japandi lounge" gives a photoreal redesign of *your* camera frame (same walls, windows, doors), plus a shoppable list of the new pieces.
+- **Find what fits**: real products from six Shopify stores, each marked **Fits · X cm to spare** or **Too wide**.
+- **True-size 3D**: every product rebuilt as a measured 3D model over your live camera, next to a 170 cm person for scale.
+- **Compare two pieces side by side** at true scale.
+- **Place it in your room**: a preview drawn into your actual frame.
+- **Buy it**: a real Shopify checkout that you confirm.
+- **See the models work**: a live rail shows which Gemini model is doing which job, as it happens.
 
 ## The loop
 
@@ -16,7 +25,7 @@ Built at the Gemini 4 NYC Hackathon, 21 November 2026 · Problem Statement Two (
    - **Visual check**: the browser renders the model, and **Decision 1** scores its likeness to the real product photo. Below 7/10, Neon lists the differences and Carbon repairs them.
    - The top-ranked product is pre-built in the background, so "show it in 3D" is usually instant.
 4. **Place**: `place_in_room` gives **Nano Banana 2.1** your actual camera frame, the product photo and its true size, and returns a preview in *your* room.
-5. **Buy**: `add_to_cart` → `checkout` builds a real Shopify checkout. The shopper reviews and pays; Theo never pays on its own.
+5. **Buy**: `add_to_cart` → `checkout` builds a real Shopify checkout. The shopper reviews and pays; the designer never pays on its own.
 
 ## Gemini models, one job each
 
@@ -32,6 +41,16 @@ Built at the Gemini 4 NYC Hackathon, 21 November 2026 · Problem Statement Two (
 Gemini 4 calls use thinking levels only (no temperature). 3D builds run Carbon at `LOW` for live speed (about 15 s); set `BUILD_THINKING=MEDIUM` for maximum quality. Every call retries 503s with backoff. The app shows a live log of each model call (role, job, model, latency).
 
 ## Proof it works: the eval
+
+| | Baseline (one Carbon call) | Space Theory |
+|---|---|---|
+| Full listing: mean size error | 7.6% | **0.0%** |
+| Full listing: all 3 axes within 10% | 83% | **100%** |
+| Photo only: mean size error (after the fix) | 9.1% | **8.3%** |
+
+Our first version *lost* on photo-only inputs (11.9% vs 10.5%). We found out why, fixed it, and re-measured. Full write-up: [`eval/REPORT.md`](eval/REPORT.md).
+
+### How the eval works
 
 `eval/run.mjs` measures whether products come out at their **true size**, on products the team never looked at.
 
@@ -70,7 +89,7 @@ Plan and API contracts: [`docs/TEAM-PLAN.md`](docs/TEAM-PLAN.md).
 
 ## Known limits
 
-- Room sizes from one camera frame are estimates. Theo says so and asks for a tape-measure number.
+- Room sizes from one camera frame are estimates. The designer says so and asks for a tape-measure number.
 - The 3D models are part-based approximations built for size and silhouette, not photoreal scans.
 - The placed-in-room image is a generated preview.
 - Public storefronts can rate-limit; search falls back to a cached catalog.

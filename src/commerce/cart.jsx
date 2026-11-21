@@ -35,7 +35,7 @@ export function CartBar({ cart, setCart, checkouts, run, setCheckouts }) {
               <span>{money(c.total)} <ExternalLink size={14} /></span>
             </a>
           ))}
-          <p>Theo fills the cart. You review and pay on the store's own Shopify checkout.</p>
+          <p>the designer fills the cart. You review and pay on the store's own Shopify checkout.</p>
         </div>
       )}
     </section>

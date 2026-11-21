@@ -1,5 +1,5 @@
 // Live API smoke test: opens a real Gemini Live session with Space Theory's tools via an ephemeral token,
-// sends one typed turn, and reports whether audio came back and which tool Theo called.
+// sends one typed turn, and reports whether audio came back and which tool the designer called.
 // Run: node --env-file=.env eval/live-smoke.mjs
 import { GoogleGenAI, Modality } from "@google/genai";
 import { liveToken } from "../server/gemini.mjs";

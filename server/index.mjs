@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { chatStep, liveToken, MODELS, ProviderError, recentTrace } from "./gemini.mjs";
 import { searchProducts, stores } from "./shopify.mjs";
 import { commerceRoutes } from "./commerce.mjs";
-import { buildModel, critiqueModel, fillSpecs, prebuild, rankProducts, scanRoom, stageInRoom } from "./home.mjs";
+import { buildModel, critiqueModel, fillSpecs, prebuild, rankProducts, redesignRoom, scanRoom, stageInRoom } from "./home.mjs";
 import { homeInstructions, homeTools } from "../shared/home-tools.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -52,7 +52,7 @@ async function body(req, limit = 6_000_000) {
 
 function cameraFrame(value) {
   const base64 = String(value ?? "").replace(/^data:image\/[a-z]+;base64,/, "");
-  if (base64.length < 1000) throw new ProviderError(400, "Turn the camera on first so Theo can see the room.");
+  if (base64.length < 1000) throw new ProviderError(400, "Turn the camera on first so the designer can see the room.");
   return base64;
 }
 
@@ -87,6 +87,10 @@ const api = {
   "POST /api/stage": async req => {
     const { frame, productId, where } = await body(req);
     return stageInRoom({ frame: cameraFrame(frame), productId: String(productId), where: String(where ?? "").slice(0, 200) });
+  },
+  "POST /api/redesign": async req => {
+    const { frame, style } = await body(req);
+    return redesignRoom({ frame: cameraFrame(frame), style: String(style ?? "").slice(0, 200) });
   },
   "POST /api/turn": async req => {
     const { contents } = await body(req, 400_000);

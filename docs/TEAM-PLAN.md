@@ -1,6 +1,6 @@
 # Space Theory: team plan and PRD (2 builders, deadline 5:00 PM)
 
-**One-line pitch.** On a live video call, you point your phone at your room and Theo finds real furniture that fits, builds each piece in 3D at true size over your camera, places it in your room, and buys it through Shopify once you confirm.
+**One-line pitch.** On a live video call, you point your phone at your room and the designer finds real furniture that fits, builds each piece in 3D at true size over your camera, places it in your room, and buys it through Shopify once you confirm.
 
 **Demo story (3 min, judged live):**
 1. *(0:00)* Open Space Theory on the phone (or laptop camera), tap **Start call**, and point it at an empty wall. "I need a sofa for this wall, under $1,800." Decision 1 gates the frame, then Neon reads the room and estimates the open wall at about 220 cm.
@@ -74,7 +74,7 @@ Rules:
 
 ## Rucha: what to build, in order (Shopify + transactions)
 
-**Goal: a real transaction on stage, with the shopper in control.** The guide's rule is "keep people in control whenever an action affects money", so Theo never pays by herself. The shopper always taps a Confirm or Pay button.
+**Goal: a real transaction on stage, with the shopper in control.** The guide's rule is "keep people in control whenever an action affects money", so the designer never pays by herself. The shopper always taps a Confirm or Pay button.
 
 1. **Account + dev store (first 15 min).** Use [shop.dev](https://shop.dev) or ask the onsite Shopify Solutions Engineers to create a **development store**. Enable test payments (Shopify's Bogus Gateway or Shopify Payments test mode). Create a Storefront API token and an Admin API token. Put them in `.env` as `SHOPIFY_DEV_STORE`, `SHOPIFY_STOREFRONT_TOKEN` and `SHOPIFY_ADMIN_TOKEN`, and never commit them.
 2. **Seed the dev store with real products (30 min).** Import 10–15 products for the demo (2–3 sofas, chairs, a lamp, a side table). Copy title, price, photos and the **W × D × H in the description** in the form `86"W x 32"H x 37.5"D` so `parseListingDims` reads them. Add the dev store to `SHOPIFY_STORES` so search covers it.

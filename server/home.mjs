@@ -421,3 +421,40 @@ export async function stageInRoom({ frame, productId, where }) {
   });
   return { image: `data:${image.mimeType};base64,${image.data}`, product: { id: product.id, title: product.title } };
 }
+
+// ---------- Live redesign: Nano Banana restyles the real room, Neon turns the design into a shopping list ----------
+const lookSchema = S("OBJECT", {
+  properties: {
+    summary: S("STRING", { description: "One sentence describing the new look." }),
+    items: S("ARRAY", {
+      items: S("OBJECT", {
+        properties: {
+          item: S("STRING", { description: "What the piece is, e.g. 'low oak media console'." }),
+          search: S("STRING", { description: "2-3 word store search, e.g. 'media console'." }),
+          approx_width_cm: num,
+          colour: str,
+        },
+        required: ["item", "search", "approx_width_cm", "colour"],
+      }),
+    }),
+  },
+  required: ["summary", "items"],
+});
+
+export async function redesignRoom({ frame, style }) {
+  const look = style || "warm modern, natural wood, soft textiles, plants";
+  const image = await generateImage({
+    job: `redesign the room: ${look.slice(0, 40)}`,
+    parts: [
+      { text: `This is a live photo of a real room from my phone. Redesign it as an interior designer would, in this style: ${look}. Keep the room's architecture exactly: same walls, windows, doors, floor plan, ceiling and camera angle. Replace or add furniture, rugs, lighting, wall colour and decor so it looks professionally designed and photorealistic, with believable real-world scale.` },
+      imagePart(frame),
+    ],
+  });
+  const plan = await generateJson({
+    role: "neon", job: "turn the design into a shopping list",
+    system: "You are an interior designer. Image 1 is the original room, image 2 is the redesign. List the 3 to 5 main NEW pieces in the redesign that someone would buy (furniture, rugs, lighting), with a short store search phrase and an estimated width.",
+    parts: [imagePart(frame), imagePart(image.data, image.mimeType)],
+    schema: lookSchema,
+  });
+  return { image: `data:${image.mimeType};base64,${image.data}`, style: look, ...plan };
+}
