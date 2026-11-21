@@ -20,7 +20,8 @@ const PORT = Number(process.env.PORT || 5180);
 const DEV = process.argv.includes("--dev");
 const PHONE = process.env.SPACE_PHONE === "1";
 const PHONE_PORT = Number(process.env.SPACE_PHONE_PORT || 5443);
-const WIFI_IPS = Object.values(os.networkInterfaces()).flat()
+// Read fresh each time, so switching Wi-Fi or joining a phone hotspot works without a restart.
+const wifiIps = () => Object.values(os.networkInterfaces()).flat()
   .filter(n => n && n.family === "IPv4" && !n.internal).map(n => n.address);
 
 const MIME = {
@@ -102,7 +103,7 @@ const api = {
 
 function hostAllowed(host) {
   if (/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return true;
-  return PHONE && WIFI_IPS.some(ip => host === `${ip}:${PHONE_PORT}`);
+  return PHONE && wifiIps().some(ip => host === `${ip}:${PHONE_PORT}`);
 }
 
 async function serveBuilt(res, urlPath) {
@@ -158,5 +159,11 @@ if (PHONE) {
       "-keyout", keyFile, "-out", certFile], { stdio: "ignore" });
   }
   https.createServer({ key: fs.readFileSync(keyFile), cert: fs.readFileSync(certFile) }, onRequest)
-    .listen(PHONE_PORT, "0.0.0.0", () => WIFI_IPS.forEach(ip => console.log(`Space Theory on your phone → https://${ip}:${PHONE_PORT}`)));
+    .listen(PHONE_PORT, "0.0.0.0", () => wifiIps().forEach(ip => console.log(`Space Theory on your phone → https://${ip}:${PHONE_PORT}`)));
+  // Print the new address whenever the network changes (e.g. after joining a phone hotspot).
+  let last = wifiIps().join(",");
+  setInterval(() => {
+    const now = wifiIps().join(",");
+    if (now !== last) { last = now; wifiIps().forEach(ip => console.log(`Network changed → open https://${ip}:${PHONE_PORT} on your phone`)); }
+  }, 3000);
 }
