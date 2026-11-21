@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { chatStep, liveToken, MODELS, ProviderError, recentTrace } from "./gemini.mjs";
 import { searchProducts, stores } from "./shopify.mjs";
 import { commerceRoutes } from "./commerce.mjs";
-import { buildModel, critiqueModel, fillSpecs, prebuild, rankProducts, redesignRoom, scanRoom, stageInRoom } from "./home.mjs";
+import { buildModel, critiqueModel, fillSpecs, matchLook, prebuild, rankProducts, redesignRoom, scanRoom, stageInRoom } from "./home.mjs";
 import { homeInstructions, homeTools } from "../shared/home-tools.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -92,6 +92,11 @@ const api = {
   "POST /api/redesign": async req => {
     const { frame, style, scope } = await body(req);
     return redesignRoom({ frame: cameraFrame(frame), style: String(style ?? "").slice(0, 200), scope: scope === "full" ? "full" : "furnish" });
+  },
+  "POST /api/shop-look": async req => {
+    const { items } = await body(req, 50_000);
+    if (!Array.isArray(items) || !items.length) throw new ProviderError(400, "Redesign the room first so there are pieces to shop.");
+    return { matches: await matchLook(items) };
   },
   "POST /api/turn": async req => {
     const { contents } = await body(req, 400_000);

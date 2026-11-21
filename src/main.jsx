@@ -159,6 +159,100 @@ function ModelRail({ trace, busy }) {
   );
 }
 
+/* ---------- shop the look: every designed piece → a real Shopify product → quantities → checkout ---------- */
+function ShopLook({ staged, act }) {
+  const [rows, setRows] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState("home");
+  const [spaces, setSpaces] = useState(10);
+  const [err, setErr] = useState("");
+  useEffect(() => { setRows(null); setErr(""); }, [staged]);
+
+  async function find() {
+    setLoading(true);
+    setErr("");
+    try {
+      const out = await call("/api/shop-look", { items: staged.items });
+      setRows(out.matches.map(r => ({ ...r, qty: 1, on: Boolean(r.match), alt: -1 })));
+    } catch (e) { setErr(e.message); } finally { setLoading(false); }
+  }
+  const pickOf = r => (r.alt >= 0 ? r.alternatives[r.alt] : r.match);
+  const set = (i, patch) => setRows(rs => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const mult = mode === "business" ? Math.max(1, spaces) : 1;
+  const chosen = (rows ?? []).filter(r => r.on && pickOf(r));
+  const total = chosen.reduce((s, r) => s + pickOf(r).price * r.qty * mult, 0);
+  const units = chosen.reduce((s, r) => s + r.qty * mult, 0);
+
+  async function buy() {
+    const items = chosen.map(r => ({ product: pickOf(r), quantity: r.qty * mult }));
+    await act("buy_look", { items });
+  }
+
+  return (
+    <section className="shoplook">
+      <header className="shoplook-head">
+        <p><Wand2 size={15} /> {staged.summary}</p>
+        {!rows && (
+          <button type="button" className="btn btn-accent" onClick={find} disabled={loading}>
+            {loading ? <><i className="spin spin-light" /> Matching on Shopify…</> : <><ShoppingBag size={15} /> Shop this look</>}
+          </button>
+        )}
+      </header>
+      {!rows && (
+        <div className="look-items">
+          {staged.items.map(it => <span key={it.item} className="look-chip">{it.item}<small>~{Math.round(it.approx_width_cm)} cm</small></span>)}
+        </div>
+      )}
+      {err && <div className="alert"><span>{err}</span></div>}
+      {rows && (
+        <>
+          <div className="shoplook-mode">
+            <div className="seg-mini">
+              <button type="button" className={mode === "home" ? "on" : ""} onClick={() => setMode("home")}>For my home</button>
+              <button type="button" className={mode === "business" ? "on" : ""} onClick={() => setMode("business")}>Business · bulk</button>
+            </div>
+            {mode === "business" && (
+              <label className="spaces">Furnish
+                <input type="number" min="1" max="500" value={spaces} onChange={e => setSpaces(Math.max(1, Math.min(500, Number(e.target.value) || 1)))} />
+                identical spaces</label>
+            )}
+          </div>
+          <ul className="shoplook-rows">
+            {rows.map((r, i) => {
+              const p = pickOf(r);
+              return (
+                <li key={r.piece.item} className={r.on && p ? "" : "off"}>
+                  <input type="checkbox" checked={r.on && Boolean(p)} disabled={!p} onChange={e => set(i, { on: e.target.checked })} aria-label={`Include ${r.piece.item}`} />
+                  {p?.image ? <img src={`${p.image}${p.image.includes("?") ? "&" : "?"}width=160`} alt="" /> : <span className="noimg" />}
+                  <div className="sl-info">
+                    <small>{r.piece.item}</small>
+                    {p ? <b>{p.title}</b> : <b className="muted">No close match found</b>}
+                    {p && <span>{p.storeName} · {usd(p.price)}{r.alt < 0 && r.confidence != null ? ` · Decision 1 match ${Math.round(r.confidence * 100)}%` : ""}</span>}
+                  </div>
+                  {r.alternatives.length > 0 && (
+                    <button type="button" className="sl-swap" onClick={() => set(i, { alt: r.alt + 1 >= r.alternatives.length ? -1 : r.alt + 1, on: true })} title="Try another match">Swap</button>
+                  )}
+                  <div className="stepper">
+                    <button type="button" onClick={() => set(i, { qty: Math.max(1, r.qty - 1) })} aria-label="Fewer">−</button>
+                    <span>{r.qty * mult}</span>
+                    <button type="button" onClick={() => set(i, { qty: r.qty + 1 })} aria-label="More">+</button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <footer className="shoplook-foot">
+            <div><b>{usd(total)}</b><small>{units} item{units === 1 ? "" : "s"}{mode === "business" ? ` · ${spaces} spaces` : ""}</small></div>
+            <button type="button" className="btn btn-accent" disabled={!chosen.length} onClick={buy}>
+              Buy selected on Shopify <ArrowUpRight size={15} />
+            </button>
+          </footer>
+        </>
+      )}
+    </section>
+  );
+}
+
 /* ---------- camera / 3D / staged stage ---------- */
 function Stage({ videoRef, cameraOn, toggleCamera, view, setView, build, critique, staged, modelRef, busy, trace, act }) {
   const views = [
@@ -199,22 +293,12 @@ function Stage({ videoRef, cameraOn, toggleCamera, view, setView, build, critiqu
           <div className="hud hud-bottom"><Ruler size={14} />{build.product.title} · {toCm(build.dims.w)} W × {toCm(build.dims.d)} D × {toCm(build.dims.h)} H
             <small>{toIn(build.dims.w)} × {toIn(build.dims.d)} × {toIn(build.dims.h)}{view === "model" ? " · person = 170 cm" : ""}</small></div>
         ))}
-        {view === "staged" && staged?.items ? (
-          <div className="look">
-            <p><Wand2 size={14} /> {staged.summary}</p>
-            <div className="look-items">
-              {staged.items.map(it => (
-                <button type="button" key={it.item} onClick={() => act("find_products", { query: it.search })}>
-                  <ShoppingBag size={13} /> {it.item}<small>~{Math.round(it.approx_width_cm)} cm</small>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : view === "staged" && <div className="hud hud-bottom"><Wand2 size={14} />Generated preview. Colours and details may differ slightly.</div>}
+        {view === "staged" && !staged?.items && <div className="hud hud-bottom"><Wand2 size={14} />Generated preview. Colours and details may differ slightly.</div>}
         {busy && <div className="hud hud-top"><i className="spin" />{busy}</div>}
       </div>
       {build ? (
         <>
+        {view === "staged" && staged?.items && <ShopLook staged={staged} act={act} />}
         <ModelRail trace={trace} busy={busy} />
         <ul className="checklist">
           {build.steps.map((s, i) => <li key={i}><Check size={13} /><b>{s.step}</b><span>{s.detail}</span></li>)}
@@ -223,6 +307,7 @@ function Stage({ videoRef, cameraOn, toggleCamera, view, setView, build, critiqu
         </>
       ) : (
         <>
+        {view === "staged" && staged?.items && <ShopLook staged={staged} act={act} />}
         <ModelRail trace={trace} busy={busy} />
         <p className="stage-hint">the designer sees your room, finds real products on Shopify, and rebuilds each one in 3D at its true size.</p>
         </>
@@ -373,7 +458,7 @@ function App() {
     const t = setInterval(() => call("/api/trace").then(d => setTrace(d.trace)).catch(() => {}), 1000);
     return () => clearInterval(t);
   }, []);
-  useEffect(() => { if (import.meta.env.DEV) window.__space = { setBuild, setProducts, setView, act }; });
+  useEffect(() => { if (import.meta.env.DEV) window.__space = { setBuild, setProducts, setView, setStaged, act }; });
 
   const say = (who, text) => text?.trim() && setLog(l => [...l.slice(-39), { id: crypto.randomUUID(), who, text: text.trim() }]);
 
@@ -501,6 +586,17 @@ function App() {
         setStaged(out);
         setView("staged");
         return { placed: out.product.title };
+      }
+      if (name === "buy_look") {
+        const items = await Promise.all(args.items.map(({ product, quantity }) => makeCartItem(product, quantity)));
+        const merged = [...latest.current.cart.filter(c => !items.some(x => x.productId === c.productId)), ...items];
+        setCart(merged);
+        latest.current.cart = merged;
+        setBusy("Preparing your Shopify checkout…");
+        const out = await startCheckout(merged);
+        setCheckouts(out.checkouts);
+        setTimeout(() => document.querySelector(".cart-bar")?.scrollIntoView({ behavior: "smooth", block: "center" }), 120);
+        return { stores: out.checkouts.map(c => ({ store: c.storeName, total: c.total })) };
       }
       if (name === "add_to_cart") {
         const item = await makeCartItem(byId(args.product_id) ?? args.product_id, args.quantity);

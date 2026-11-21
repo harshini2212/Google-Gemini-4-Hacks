@@ -2,7 +2,7 @@
 // of a product from its photos and listing, check that model against the numbers and the photo,
 // and draw the product into the caller's own camera frame.
 import { decide, fetchImagePart, generateImage, generateJson, imagePart, MODELS, rubric01 } from "./gemini.mjs";
-import { productById } from "./shopify.mjs";
+import { productById, searchProducts } from "./shopify.mjs";
 
 const S = (type, extra = {}) => ({ type, ...extra });
 const num = S("NUMBER");
@@ -493,4 +493,39 @@ export async function redesignRoom({ frame, style, scope = "furnish" }) {
     schema: lookSchema,
   });
   return { image: `data:${image.mimeType};base64,${image.data}`, style: look, scope: full ? "full" : "furnish", kept, ...plan };
+}
+
+// ---------- Shop the look: find the closest real Shopify product for every piece in the design ----------
+// Search runs per piece in parallel; Decision 1 picks the best candidate as one multiple-choice question per piece.
+export async function matchLook(items) {
+  const pieces = items.slice(0, 6);
+  const pools = await Promise.all(pieces.map(it => searchProducts(String(it.search || it.item).slice(0, 60), { perStore: 3 }).catch(() => [])));
+  const questions = {};
+  pieces.forEach((it, i) => {
+    const pool = pools[i].slice(0, 12);
+    if (!pool.length) return;
+    const criteria = Object.fromEntries(pool.map((p, j) => [`c${String(j).padStart(2, "0")}`,
+      `${p.title} (${p.storeName}, $${p.price}${p.listingDims?.w ? `, ${Math.round(p.listingDims.w)} cm wide` : ""}, type "${p.type}")`]));
+    criteria.other = "None of these is the right kind of item.";
+    questions[`q${i}`] = { type: "choice", instructions: `Which product best matches this piece from an interior design: "${it.item}" (${it.colour || "any colour"}, about ${Math.round(it.approx_width_cm || 0)} cm wide)? Match the kind of item first, then colour and size.`, criteria };
+  });
+  let answers = {};
+  if (Object.keys(questions).length) {
+    try {
+      answers = await decide({ job: `match ${pieces.length} designed pieces to Shopify products`, input: [{ type: "text", text: "Shopping for the pieces in an interior redesign." }], questions });
+    } catch { answers = {}; }
+  }
+  return pieces.map((it, i) => {
+    const pool = pools[i].slice(0, 12);
+    const a = answers[`q${i}`];
+    const idx = a?.choice && a.choice !== "other" ? Number(a.choice.slice(1)) : (a ? -1 : 0);
+    const pick = idx >= 0 ? pool[idx] : null;
+    const brief = p => p && { id: p.id, title: p.title, storeName: p.storeName, price: p.price, image: p.image, url: p.url, variants: p.variants, listingDims: p.listingDims };
+    return {
+      piece: it,
+      match: brief(pick),
+      confidence: a?.confidence ?? null,
+      alternatives: pool.filter(p => p !== pick).slice(0, 2).map(brief),
+    };
+  });
 }

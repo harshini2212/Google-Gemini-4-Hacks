@@ -5,7 +5,8 @@
 Built at the Gemini 4 NYC Hackathon, 21 November 2026 · Problem Statement Two (Element 119) + Shopify track.
 
 ## What it does live
-- **Redesign your real room**: "make this a cozy Japandi lounge" gives a photoreal redesign of *your* camera frame (same walls, windows, doors), plus a shoppable list of the new pieces.
+- **Redesign your real room**: "add a cozy lounge corner" restyles *your* live camera frame, keeping the same people, walls, screens and background and changing only furniture and decor. Decision 1 checks that the scene was kept and redraws once if it wasn't.
+- **Shop the look**: every piece in the redesign is matched to a real Shopify product (Decision 1 picks the closest, with a confidence score). Choose which pieces and how many, switch to **Business · bulk** to furnish N identical spaces, then buy them through Shopify checkout.
 - **Find what fits**: real products from six Shopify stores, each marked **Fits · X cm to spare** or **Too wide**.
 - **True-size 3D**: every product rebuilt as a measured 3D model over your live camera, next to a 170 cm person for scale.
 - **Compare two pieces side by side** at true scale.

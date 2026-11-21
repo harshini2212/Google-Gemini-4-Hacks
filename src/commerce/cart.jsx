@@ -1,5 +1,5 @@
 // OWNER: Rucha (see docs/TEAM-PLAN.md). The cart bar + checkout sheet.
-// The shopper always confirms: Theo only builds the checkout, the shopper taps "Confirm & pay".
+// The shopper always confirms: the designer only builds the checkout, the shopper taps "Confirm & pay".
 import React, { useEffect, useState } from "react";
 import { CheckCircle2, ExternalLink, ShoppingBag, X } from "lucide-react";
 import { orderStatus } from "./client.mjs";
@@ -89,7 +89,7 @@ export function CartBar({ cart, setCart, checkouts, run, setCheckouts }) {
         <div className="checkout-sheet" role="dialog" aria-label="Checkout">
           <div className="checkout-head"><h3>Review your order</h3><button type="button" onClick={() => setCheckouts(null)} aria-label="Close"><X size={16} /></button></div>
           {checkouts.map(c => <StoreCheckout key={c.ref ?? c.store} c={c} />)}
-          <p>Theo never pays for you. You confirm, then pay on the store's own Shopify checkout.</p>
+          <p>Space Theory never pays for you. You confirm, then pay on the store's own Shopify checkout.</p>
         </div>
       )}
     </section>
