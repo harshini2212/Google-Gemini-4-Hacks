@@ -20,7 +20,7 @@ export async function startCheckout(items) {
   return post("/api/checkout", { items });
 }
 
-// Optional: poll after the shopper pays, to show "Order #1001 placed" in the app.
+// Poll after the shopper confirms, to show "Order #1001 placed" in the app (dev-store checkouts only).
 export async function orderStatus(checkout) {
   return post("/api/order-status", { checkout });
 }
