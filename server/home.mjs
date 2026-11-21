@@ -269,11 +269,22 @@ export function snapToDims(model, dims) {
 // Carbon's thinking level for 3D builds: LOW keeps a live build in seconds; set BUILD_THINKING=MEDIUM for max quality.
 const buildThinking = () => process.env.BUILD_THINKING || "LOW";
 
+// Only axes the listing actually states are enforced. Unstated axes are left to Carbon's own estimate from the
+// photos: in our eval (photo-only condition) Carbon's estimate beat Neon's text-based estimate (10.5% vs 11.9% error).
+function sizeBrief(dims) {
+  const named = { w: "width", d: "depth", h: "height" };
+  const known = Object.keys(named).filter(k => dims?.[k]);
+  if (!known.length) return "The listing does not state its size: estimate the real-world size carefully from the photos (reference objects, typical sizes for this kind of product).";
+  const stated = known.map(k => `${named[k]} ${dims[k]} cm`).join(", ");
+  const missing = Object.keys(named).filter(k => !dims?.[k]).map(k => named[k]);
+  return `Target overall size: ${stated}.${missing.length ? ` Estimate the ${missing.join(" and ")} yourself from the photos.` : ""}`;
+}
+
 async function draftModel(product, dims, photos) {
   return generateJson({
     role: "carbon", job: "draft the 3D part model", thinking: buildThinking(),
     system: MODEL_RULES,
-    parts: [{ text: `Product: ${product.title} (${product.type || "furniture"}) from ${product.storeName}.\nTarget overall size: width ${dims.w} cm, depth ${dims.d} cm, height ${dims.h} cm.\nListing: ${product.description.slice(0, 1200)}` }, ...photos],
+    parts: [{ text: `Product: ${product.title} (${product.type || "furniture"}) from ${product.storeName}.\n${sizeBrief(dims)}\nListing: ${product.description.slice(0, 1200)}` }, ...photos],
     schema: modelSchema
   });
 }
@@ -282,7 +293,7 @@ async function repairModel(product, dims, photos, model, issues, job = "repair t
   return generateJson({
     role: "carbon", job, thinking: buildThinking(),
     system: MODEL_RULES,
-    parts: [{ text: `Product: ${product.title}. Target overall size: width ${dims.w} cm, depth ${dims.d} cm, height ${dims.h} cm.\nYour previous model failed these checks:\n- ${issues.join("\n- ")}\nFix every issue and return the full corrected model.\nPrevious model:\n${JSON.stringify(model)}` }, ...photos],
+    parts: [{ text: `Product: ${product.title}. ${sizeBrief(dims)}\nYour previous model failed these checks:\n- ${issues.join("\n- ")}\nFix every issue and return the full corrected model.\nPrevious model:\n${JSON.stringify(model)}` }, ...photos],
     schema: modelSchema
   });
 }
@@ -315,8 +326,12 @@ export async function baselineModel(product) {
 export async function buildModelFor(product, { maxRepairs = 2 } = {}) {
   const started = Date.now();
   const photos = await Promise.all((product.images.length ? product.images : [product.image]).slice(0, 2).map(url => fetchImagePart(url)));
-  const dims = await resolveDims(product, photos[0]);
-  const steps = [{ step: "dimensions", detail: `${dims.w} × ${dims.d} × ${dims.h} cm (${dims.confidence}) · ${dims.source}`.slice(0, 220) }];
+  const listed = product.listingDims;
+  const dims = { w: listed?.w, d: listed?.d, h: listed?.h };
+  const stated = ["w", "d", "h"].filter(k => dims[k]);
+  const steps = [{ step: "dimensions", detail: stated.length
+    ? `listing states ${stated.map(k => `${k.toUpperCase()} ${dims[k]} cm`).join(", ")}${stated.length < 3 ? "; Carbon estimates the rest from the photos" : ""}`
+    : "listing has no size: Carbon estimates it from the photos" }];
   let model = await draftModel(product, dims, photos);
   let check = checkModel(model, dims);
   const firstCheck = check;
@@ -327,10 +342,16 @@ export async function buildModelFor(product, { maxRepairs = 2 } = {}) {
     steps.push({ step: `repair ${round}`, detail: check.ok ? "passed every check" : check.issues.join(" ") });
   }
   const final = check.issues.some(i => i.startsWith("Parts with invalid")) ? model : snapToDims(model, dims);
-  steps.push({ step: "snap", detail: "scaled to the measured size and stood on the floor" });
+  steps.push({ step: "snap", detail: stated.length ? "stated axes locked to the listing; stood on the floor" : "stood on the floor at Carbon's estimated size" });
+  const size = boundsOf(final).size;
+  const finalDims = {
+    w: Math.round(size.w * 10) / 10, d: Math.round(size.d * 10) / 10, h: Math.round(size.h * 10) / 10,
+    source: stated.length === 3 ? `listing: ${listed.raw}` : stated.length ? "listing + Carbon estimate" : "Carbon estimate from photos",
+    confidence: stated.length === 3 ? "high" : "estimated",
+  };
   return {
     product: { id: product.id, title: product.title, image: product.image, price: product.price, storeName: product.storeName },
-    dims, model: final, steps,
+    dims: finalDims, model: final, steps,
     checks: { first: firstCheck, last: check, final: checkModel(final, dims) },
     models: { builder: MODELS.carbon(), dimensions: MODELS.neon() }, ms: Date.now() - started,
   };
@@ -378,7 +399,8 @@ export async function critiqueModel({ productId, render, model }) {
   const critique = { score: score ?? Math.max(0, 9 - issues.length * 1.5), confidence, issues };
   if (!issues.length || !model) return { critique, model: null };
   const photos = [photo];
-  const dims = await resolveDims(product, photo);
+  const listedDims = product.listingDims ?? {};
+  const dims = { w: listedDims.w, d: listedDims.d, h: listedDims.h };
   const repaired = await repairModel(product, dims, photos, model, critique.issues, "repair the model after the visual check");
   return { critique, model: snapToDims(repaired, dims), check: checkModel(repaired, dims) };
 }
