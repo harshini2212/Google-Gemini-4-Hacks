@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Box, Camera, CameraOff, Check, CircleStop, Mic, Orbit, Ruler, Scale, ScanLine, Send, ShoppingBag, Sparkles, Wand2,
+  ArrowUpRight, Box, Camera, CameraOff, Check, CircleStop, Mic, Orbit, Ruler, Scale, ScanLine, Send, ShoppingBag, Sparkles, Wand2,
 } from "lucide-react";
 import "@fontsource-variable/dm-sans";
 import "./app.css";
@@ -33,17 +33,79 @@ const toCm = n => (n ? `${Math.round(n)} cm` : "–");
 const toIn = n => (n ? `${Math.round(n / 2.54)}″` : "–");
 
 /* ---------- top bar ---------- */
-function TopBar({ status }) {
+function TopBar({ status, cartCount }) {
+  const ready = status?.ready;
   return (
     <header className="st-bar">
-      <div className="st-brand"><Orbit size={22} strokeWidth={1.6} /> <span>Space Theory</span></div>
-      <div className="st-models">
-        {status?.models && Object.entries(status.models).map(([role, id]) => (
-          <span key={role} className={`chip chip-${role}`} title={id}>{ROLE[role]}<em>{id}</em></span>
-        ))}
-        {status && !status.ready && <span className="chip chip-warn">GEMINI_API_KEY missing</span>}
+      <div className="st-brand">
+        <span className="mark"><i /><i /><i /></span>
+        <div><b>Space Theory</b><small>Live interior studio</small></div>
+      </div>
+      <nav className="st-nav" aria-label="Sections">
+        <span className="on">Studio</span><span>Redesign</span><span>3D fit</span><span>Shop</span><span>Models</span>
+      </nav>
+      <div className="st-tools">
+        <span className="round" title={ready ? "Gemini connected" : "Add GEMINI_API_KEY"}><Orbit size={18} /><i className={ready ? "ping ok" : "ping"} /></span>
+        <span className="round" title={`${cartCount} in cart`}><ShoppingBag size={18} />{cartCount > 0 && <i className="ping ok" />}</span>
       </div>
     </header>
+  );
+}
+
+/* ---------- animated number ---------- */
+function useTween(target, ms = 900) {
+  const [value, setValue] = useState(target);
+  const from = useRef(target);
+  useEffect(() => {
+    const start = performance.now();
+    const a = from.current;
+    let raf;
+    const step = now => {
+      const t = Math.min(1, (now - start) / ms);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(a + (target - a) * eased);
+      if (t < 1) raf = requestAnimationFrame(step);
+      else from.current = target;
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return value;
+}
+
+function Stat({ value, label, bars, decimals = 0, suffix = "", bad = false }) {
+  const shown = useTween(value);
+  const max = Math.max(1, ...bars);
+  return (
+    <div className="stat">
+      <div className="stat-num">{shown.toFixed(decimals)}{suffix}
+        <span className={bad ? "badge bad" : "badge"}><ArrowUpRight /></span></div>
+      <div className="stat-label">{label}</div>
+      <div className={bad ? "spark bad" : "spark"} aria-hidden="true">
+        {bars.map((b, i) => <i key={i} className={i >= bars.length - 3 ? "hot" : ""} style={{ height: `${Math.max(8, (b / max) * 100)}%` }} />)}
+      </div>
+    </div>
+  );
+}
+
+function Hero({ trace, searched }) {
+  const pad = (xs, n = 22) => [...Array(Math.max(0, n - xs.length)).fill(0.15), ...xs].slice(-n);
+  const builds = trace.filter(t => t.role === "carbon" && t.ok);
+  const avgBuild = builds.length ? builds.reduce((s, t) => s + t.ms, 0) / builds.length / 1000 : 0;
+  const models = new Set(trace.map(t => t.role)).size;
+  return (
+    <section className="hero">
+      <div className="hero-title">
+        <span className="back"><ScanLine size={18} /></span>
+        <div><h1>Your Space</h1><p className="kicker">Live room · Gemini 4 studio</p></div>
+      </div>
+      <div className="stats">
+        <Stat value={trace.length} label="Gemini calls" bars={pad(trace.map(t => t.ms))} />
+        <Stat value={models} label="Models working" bars={pad(trace.map(t => ({ live: 1, decision: 2, hydrogen: 3, neon: 4, carbon: 5, image: 6 }[t.role] ?? 1)))} />
+        <Stat value={searched} label="Products checked" bars={pad(Array.from({ length: Math.min(22, searched) }, (_, i) => 1 + ((i * 7) % 5)))} />
+        <Stat value={avgBuild} decimals={1} suffix="s" label="Avg 3D build" bad={avgBuild > 30} bars={pad(builds.map(t => t.ms))} />
+      </div>
+    </section>
   );
 }
 
@@ -115,7 +177,7 @@ function Stage({ videoRef, cameraOn, toggleCamera, view, setView, build, critiqu
           {cameraOn ? <CameraOff size={16} /> : <Camera size={16} />}
         </button>
       </nav>
-      <div className="viewport">
+      <div className={busy ? "viewport working" : "viewport"}>
         <video ref={videoRef} className={view === "staged" ? "feed gone" : "feed"} autoPlay muted playsInline />
         {!cameraOn && view === "room" && (
           <div className="viewport-empty">
@@ -294,6 +356,7 @@ function App() {
   const [voice, setVoice] = useState("idle");
   const [error, setError] = useState("");
   const [trace, setTrace] = useState([]);
+  const [searched, setSearched] = useState(0);
   const videoRef = useRef(null);
   const modelRef = useRef(null);
   const frameCanvas = useRef(null);
@@ -376,6 +439,7 @@ function App() {
         setBusy(`Searching Shopify for “${args.query}”…`);
         const out = await call("/api/products", { ...args, room: latest.current.room });
         setProducts(out.products);
+        setSearched(n => n + (out.checked ?? out.products.length));
         return {
           space_used: out.space,
           products: out.products.map(p => ({
@@ -519,12 +583,9 @@ function App() {
 
   return (
     <>
-      <TopBar status={status} />
+      <TopBar status={status} cartCount={cart.length} />
       <main className="st-main">
-        <section className="hero">
-          <p className="kicker">Shop your room on a live call</p>
-          <h1>See it in your space, at true size, before you buy.</h1>
-        </section>
+        <Hero trace={trace} searched={searched} />
         <div className="layout">
           <Stage videoRef={videoRef} cameraOn={cameraOn} toggleCamera={cameraOn ? cameraStop : cameraStart} view={view} setView={setView}
             build={build} critique={critique} staged={staged} modelRef={modelRef} busy={busy} trace={trace} act={act} />

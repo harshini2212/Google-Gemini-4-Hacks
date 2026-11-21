@@ -77,7 +77,7 @@ const api = {
     const candidates = await fillSpecs(found.slice(0, 16));
     const ranked = await rankProducts({ products: candidates, request: q, room, space });
     if (ranked[0]) prebuild(ranked[0].id); // the top pick is usually what gets shown in 3D next
-    return { products: ranked.slice(0, 6), space, searched: stores().length };
+    return { products: ranked.slice(0, 6), space, searched: stores().length, checked: candidates.length };
   },
   "POST /api/model3d": async req => buildModel(String((await body(req, 10_000)).productId)),
   "POST /api/critique": async req => {
