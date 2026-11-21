@@ -441,20 +441,56 @@ const lookSchema = S("OBJECT", {
   required: ["summary", "items"],
 });
 
-export async function redesignRoom({ frame, style }) {
-  const look = style || "warm modern, natural wood, soft textiles, plants";
-  const image = await generateImage({
-    job: `redesign the room: ${look.slice(0, 40)}`,
-    parts: [
-      { text: `This is a live photo of a real room from my phone. Redesign it as an interior designer would, in this style: ${look}. Keep the room's architecture exactly: same walls, windows, doors, floor plan, ceiling and camera angle. Replace or add furniture, rugs, lighting, wall colour and decor so it looks professionally designed and photorealistic, with believable real-world scale.` },
-      imagePart(frame),
-    ],
-  });
+// Default is "furnish": keep the real scene (people, walls, screens, lighting, camera) and only add or swap
+// furniture and decor. "full" (walls/finishes too) happens only when the shopper explicitly asks for it.
+const KEEP_RULES = `STRICT RULES:
+- This is a real photo. Keep every person exactly as they are: same people, faces, poses, clothing and positions. Do not add, remove or move anyone.
+- Keep the room itself exactly: walls, ceiling, floor, windows, doors, screens, stage, lighting rigs, signage and camera angle stay identical.
+- Keep existing objects people are using (laptops, cups, bags) unless asked to clear them.
+- Only ADD or SWAP furniture and decor that fits naturally around the people: seating, tables, rugs, plants, lamps, shelves, art, cushions, accents.
+- Match the photo's real lighting, perspective, grain and colour so the new pieces look like they were physically there.`;
+
+export async function redesignRoom({ frame, style, scope = "furnish" }) {
+  const look = style || "warm modern: natural wood, soft textiles, plants";
+  const full = scope === "full";
+  const prompt = full
+    ? `This is a live photo of a real room from my phone. Redesign it in this style: ${look}. You may change wall finishes and surfaces, but keep every person exactly as they are (same people, faces, poses, positions), keep the architecture, windows, doors and camera angle, and keep it photorealistic.`
+    : `This is a live photo of a real room from my phone. Style it as an interior designer, in this direction: ${look}.\n${KEEP_RULES}`;
+  let image = await generateImage({ job: `redesign (${full ? "full" : "furnish"}): ${look.slice(0, 36)}`, parts: [{ text: prompt }, imagePart(frame)] });
+
+  // Decision 1 checks the edit kept the real scene; one stricter redraw if it didn't.
+  let kept = null;
+  try {
+    const answers = await decide({
+      job: "check the redesign kept the real room and people",
+      input: [
+        { type: "text", text: "Image 1 is the original photo. Image 2 is an interior-design edit of it." },
+        decisionImage(frame), decisionImage(image.data, image.mimeType),
+      ],
+      questions: {
+        same_people: { type: "noul", instructions: "Are the same people from image 1 still in image 2, in the same places (or were there no people in image 1)?" },
+        same_room: { type: "noul", instructions: full
+          ? "Is image 2 clearly the same room as image 1 (same architecture and camera angle)?"
+          : "Does image 2 keep the same walls, ceiling, screens and background as image 1, changing mainly furniture and decor?" },
+      },
+    });
+    kept = { people: answers.same_people?.noul ?? null, room: answers.same_room?.noul ?? null };
+    if ((kept.people ?? 1) < 0.5 || (kept.room ?? 1) < 0.5) {
+      image = await generateImage({
+        job: "redesign redraw: keep people and room",
+        parts: [{ text: `${prompt}\nYour last attempt changed the room or the people. Edit the ORIGINAL photo minimally: same people, same walls and background; only place furniture and decor into the existing scene.` }, imagePart(frame)],
+      });
+      kept.redrawn = true;
+    }
+  } catch {
+    // Decisions API unavailable: keep the first image.
+  }
+
   const plan = await generateJson({
     role: "neon", job: "turn the design into a shopping list",
-    system: "You are an interior designer. Image 1 is the original room, image 2 is the redesign. List the 3 to 5 main NEW pieces in the redesign that someone would buy (furniture, rugs, lighting), with a short store search phrase and an estimated width.",
+    system: "You are an interior designer. Image 1 is the original room, image 2 is the edited version. List the 3 to 5 main pieces that are NEW in image 2 (not already in image 1) that someone could buy: furniture, rugs, lighting, plants, decor. Give a short store search phrase and an estimated width.",
     parts: [imagePart(frame), imagePart(image.data, image.mimeType)],
     schema: lookSchema,
   });
-  return { image: `data:${image.mimeType};base64,${image.data}`, style: look, ...plan };
+  return { image: `data:${image.mimeType};base64,${image.data}`, style: look, scope: full ? "full" : "furnish", kept, ...plan };
 }

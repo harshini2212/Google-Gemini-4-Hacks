@@ -90,8 +90,8 @@ const api = {
     return stageInRoom({ frame: cameraFrame(frame), productId: String(productId), where: String(where ?? "").slice(0, 200) });
   },
   "POST /api/redesign": async req => {
-    const { frame, style } = await body(req);
-    return redesignRoom({ frame: cameraFrame(frame), style: String(style ?? "").slice(0, 200) });
+    const { frame, style, scope } = await body(req);
+    return redesignRoom({ frame: cameraFrame(frame), style: String(style ?? "").slice(0, 200), scope: scope === "full" ? "full" : "furnish" });
   },
   "POST /api/turn": async req => {
     const { contents } = await body(req, 400_000);

@@ -10,8 +10,11 @@ export const homeTools = [
     "Look at the live camera frame right now: room type, style, palette, what is already there, and open floor spaces with estimated sizes. Call this before recommending furniture, and again when the shopper points the camera somewhere new.",
     { goal: { type: T.S, description: "What the shopper wants for this space." } }),
   tool("redesign_room",
-    "Redesign the room the camera is showing, live, in a style (e.g. 'Japandi', 'warm mid-century', 'cozy coworking lounge'). Returns a photoreal redesign of their real room and a shopping list of the new pieces. Use when they ask you to design, style, decorate or reimagine the space.",
-    { style: { type: T.S, description: "The style or vibe to design in. Use what they said, or pick one that suits the room." } }),
+    "Style the space the camera is showing, live. By default it KEEPS the real scene (the same people, walls, screens, background and existing objects) and only adds or swaps furniture and decor. Returns a photoreal edit plus a shopping list of the new pieces.",
+    {
+      style: { type: T.S, description: "What to add or the vibe, e.g. 'add a cozy lounge corner with a sofa, rug and plants', 'Japandi touches', 'clear the tables and add warm lamps'." },
+      scope: { type: T.S, description: "'furnish' (default): keep walls/background, change furniture and decor only. 'full': also change walls and finishes. Use 'full' ONLY if the shopper explicitly asks to change the walls, background or whole room." },
+    }, ["style"]),
   tool("find_products",
     "Search real Shopify stores for products, ranked for this room and space. Returns up to 6 products with price, store, size and whether they fit.",
     {

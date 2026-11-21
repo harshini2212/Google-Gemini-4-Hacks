@@ -12,7 +12,8 @@ import { CartBar } from "./commerce/cart.jsx";
 import { makeCartItem, startCheckout } from "./commerce/client.mjs";
 
 const STARTERS = [
-  "Redesign this room as a cozy Japandi lounge",
+  "Add a cozy lounge corner here with a sofa, rug and plants, keep everyone in place",
+  "Style this space with Japandi touches: warm lamps, plants and wood accents",
   "What would make this room feel finished?",
   "Find a sofa that fits this wall, under $1,800",
   "I need a floor lamp for this corner",
@@ -430,7 +431,7 @@ function App() {
         const frame = snap(1280, 0.9);
         if (!frame) return { error: "The camera is off." };
         setBusy(`Redesigning your room: ${args.style || "designer's pick"}…`);
-        const out = await call("/api/redesign", { frame, style: args.style });
+        const out = await call("/api/redesign", { frame, style: args.style, scope: args.scope });
         setStaged({ image: out.image, product: { title: `${out.style} redesign` }, items: out.items, summary: out.summary });
         setView("staged");
         return { look: out.summary, pieces: out.items };
