@@ -1,0 +1,29 @@
+{
+  "name": "space-theory",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shop your own room on a live video call: Gemini 4 sees the space, Shopify supplies real products, and every piece is rebuilt in 3D at true size.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env server/index.mjs --dev",
+    "phone": "SPACE_PHONE=1 node --env-file-if-exists=.env server/index.mjs --dev",
+    "build": "vite build",
+    "start": "node --env-file-if-exists=.env server/index.mjs",
+    "test": "node eval/checks.test.mjs",
+    "eval": "node --env-file=.env eval/run.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.3.0",
+    "@google/genai": "^3.6.1",
+    "lucide-react": "^1.73.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.8"
+  }
+}
