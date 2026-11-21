@@ -1,0 +1,17 @@
+{
+  "name": "Test sofa (hand-built fixture for checking the renderer and the rule checks)",
+  "category": "sofa",
+  "parts": [
+    { "name": "base", "shape": "rounded_box", "center_cm": [0, 30, 0], "size_cm": [200, 22, 90], "rotation_deg": [0, 0, 0], "color": "#b9a993", "material": "boucle" },
+    { "name": "back", "shape": "rounded_box", "center_cm": [0, 58, -34], "size_cm": [200, 46, 22], "rotation_deg": [0, 0, 0], "color": "#b9a993", "material": "boucle" },
+    { "name": "left arm", "shape": "rounded_box", "center_cm": [-92, 50, 0], "size_cm": [18, 42, 90], "rotation_deg": [0, 0, 0], "color": "#b3a38d", "material": "boucle" },
+    { "name": "right arm", "shape": "rounded_box", "center_cm": [92, 50, 0], "size_cm": [18, 42, 90], "rotation_deg": [0, 0, 0], "color": "#b3a38d", "material": "boucle" },
+    { "name": "seat cushion left", "shape": "rounded_box", "center_cm": [-41, 47, 8], "size_cm": [80, 14, 66], "rotation_deg": [0, 0, 0], "color": "#c4b59f", "material": "boucle" },
+    { "name": "seat cushion right", "shape": "rounded_box", "center_cm": [41, 47, 8], "size_cm": [80, 14, 66], "rotation_deg": [0, 0, 0], "color": "#c4b59f", "material": "boucle" },
+    { "name": "leg front left", "shape": "cylinder", "center_cm": [-90, 9.5, 38], "size_cm": [5, 19, 5], "rotation_deg": [0, 0, 0], "color": "#6b4a2f", "material": "wood" },
+    { "name": "leg front right", "shape": "cylinder", "center_cm": [90, 9.5, 38], "size_cm": [5, 19, 5], "rotation_deg": [0, 0, 0], "color": "#6b4a2f", "material": "wood" },
+    { "name": "leg back left", "shape": "cylinder", "center_cm": [-90, 9.5, -38], "size_cm": [5, 19, 5], "rotation_deg": [0, 0, 0], "color": "#6b4a2f", "material": "wood" },
+    { "name": "leg back right", "shape": "cylinder", "center_cm": [90, 9.5, -38], "size_cm": [5, 19, 5], "rotation_deg": [0, 0, 0], "color": "#6b4a2f", "material": "wood" },
+    { "name": "pillow", "shape": "rounded_box", "center_cm": [-60, 66, -18], "size_cm": [45, 40, 14], "rotation_deg": [-12, 8, 0], "color": "#6f7f5f", "material": "velvet" }
+  ]
+}
